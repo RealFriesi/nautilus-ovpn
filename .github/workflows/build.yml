@@ -2,8 +2,15 @@ name: Build
 
 on:
   push:
+    branches:
+      - "**"
+    tags:
+      - "v*"
   pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -35,3 +42,32 @@ jobs:
           name: libnautilus_ovpn-${{ runner.os }}-${{ github.sha }}
           path: target/release/libnautilus_ovpn.so
           if-no-files-found: error
+
+  release:
+    name: Publish release asset
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download shared library
+        uses: actions/download-artifact@v4
+        with:
+          name: libnautilus_ovpn-${{ runner.os }}-${{ github.sha }}
+          path: release-assets
+
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          if ! gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            gh release create "$TAG_NAME" \
+              --title "$TAG_NAME" \
+              --generate-notes
+          fi
+          gh release upload "$TAG_NAME" \
+            release-assets/libnautilus_ovpn.so \
+            --clobber
