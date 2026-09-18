@@ -620,7 +620,11 @@ name = "nautilus-ovpn"
 version = "0.1.0"
 dependencies = [
  "gio",
+ "gio-sys",
  "glib",
+ "glib-sys",
+ "gobject-sys",
+ "libc",
  "system-deps",
  "tokio",
  "uuid",
