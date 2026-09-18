@@ -106,6 +106,9 @@ mod tests {
     fn only_injects_the_missing_one() {
         let input = "providers legacy default\nclient\n";
         let patched = patch_legacy_provider(input);
-        assert_eq!(patched, "tls-cert-profile legacy\nproviders legacy default\nclient\n");
+        assert_eq!(
+            patched,
+            "tls-cert-profile legacy\nproviders legacy default\nclient\n"
+        );
     }
 }

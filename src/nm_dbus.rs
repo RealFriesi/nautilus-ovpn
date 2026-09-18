@@ -84,8 +84,8 @@ pub async fn activate_vpn(session_id: &str, config_path: &str) -> Result<(), Str
 
     println!("[nautilus-openvpn] registered volatile connection at {connection_path}");
 
-    let root_path = ObjectPath::try_from("/")
-        .map_err(|e| format!("invalid root object path: {e}"))?;
+    let root_path =
+        ObjectPath::try_from("/").map_err(|e| format!("invalid root object path: {e}"))?;
 
     let active_path = nm_proxy
         .activate_connection(&connection_path.as_ref(), &root_path, &root_path)
