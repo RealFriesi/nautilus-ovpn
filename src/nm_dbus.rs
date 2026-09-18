@@ -7,6 +7,8 @@ use uuid::Uuid;
 use zbus::zvariant::{ObjectPath, OwnedObjectPath, OwnedValue, Value};
 use zbus::{proxy, Connection};
 
+use crate::credentials::VpnCredentials;
+
 /// `NM_SETTINGS_ADD_CONNECTION2_FLAG_IN_MEMORY`, keeps the connection out of
 /// `/etc/NetworkManager/system-connections/`.
 const ADD_CONNECTION2_FLAG_IN_MEMORY: u32 = 0x2;
@@ -42,7 +44,11 @@ trait NetworkManager {
 
 /// Registers `config_path` as a volatile OpenVPN connection named
 /// `VPN-<session_id>` and activates it right away.
-pub async fn activate_vpn(session_id: &str, config_path: &str) -> Result<(), String> {
+pub async fn activate_vpn(
+    session_id: &str,
+    config_path: &str,
+    credentials: Option<&VpnCredentials>,
+) -> Result<(), String> {
     let connection = Connection::system()
         .await
         .map_err(|e| format!("failed to connect to the system D-Bus: {e}"))?;
@@ -65,6 +71,14 @@ pub async fn activate_vpn(session_id: &str, config_path: &str) -> Result<(), Str
 
     let mut vpn_data: HashMap<&str, &str> = HashMap::new();
     vpn_data.insert("config", config_path);
+    if let Some(credentials) = credentials {
+        vpn_data.insert("username", credentials.username.as_str());
+    }
+
+    let mut vpn_secrets: HashMap<&str, &str> = HashMap::new();
+    if let Some(credentials) = credentials {
+        vpn_secrets.insert("password", credentials.password.as_str());
+    }
 
     let mut vpn_section: HashMap<&str, Value<'_>> = HashMap::new();
     vpn_section.insert(
@@ -72,6 +86,9 @@ pub async fn activate_vpn(session_id: &str, config_path: &str) -> Result<(), Str
         Value::from("org.freedesktop.NetworkManager.openvpn"),
     );
     vpn_section.insert("data", Value::from(vpn_data));
+    if !vpn_secrets.is_empty() {
+        vpn_section.insert("secrets", Value::from(vpn_secrets));
+    }
 
     let mut settings: HashMap<&str, HashMap<&str, Value<'_>>> = HashMap::new();
     settings.insert("connection", connection_section);

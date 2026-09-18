@@ -18,6 +18,8 @@ pub struct StagedConfig {
     pub dir: PathBuf,
     /// Full path to the patched `.ovpn` file inside `dir`.
     pub config_path: PathBuf,
+    /// Whether the config contains `auth-user-pass` without a credential file.
+    pub requires_credentials: bool,
     /// Unique session id used both for the staging dir name and the
     /// NetworkManager connection id.
     pub session_id: String,
@@ -115,6 +117,7 @@ pub fn stage_ovpn_file(source_uri: &str) -> Result<StagedConfig, String> {
 
     let original_content = fs::read_to_string(&staged_ovpn_path)
         .map_err(|e| format!("failed to read staged .ovpn file: {e}"))?;
+    let requires_credentials = ovpn_parser::requires_auth_user_pass_prompt(&original_content);
     let patched_content = ovpn_parser::patch_legacy_provider(&original_content);
     fs::write(&staged_ovpn_path, patched_content)
         .map_err(|e| format!("failed to write patched .ovpn file: {e}"))?;
@@ -124,6 +127,7 @@ pub fn stage_ovpn_file(source_uri: &str) -> Result<StagedConfig, String> {
     Ok(StagedConfig {
         dir: staging_dir,
         config_path: staged_ovpn_path,
+        requires_credentials,
         session_id,
     })
 }

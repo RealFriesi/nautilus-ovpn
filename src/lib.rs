@@ -3,6 +3,7 @@
 //! connections, staging the config (and any companion cert/key files) out of
 //! GVFS/SMB mounts first so `nm-openvpn` can actually read them.
 
+mod credentials;
 mod ffi;
 mod nm_dbus;
 mod ovpn_parser;
@@ -117,6 +118,10 @@ unsafe extern "C" fn on_menu_item_activate(
                 return;
             }
         };
+        log(format!(
+            "staged VPN config in {}",
+            staged.dir.display()
+        ));
 
         let config_path = match staged.config_path.to_str() {
             Some(p) => p.to_string(),
@@ -124,6 +129,22 @@ unsafe extern "C" fn on_menu_item_activate(
                 log_err("staged config path is not valid UTF-8");
                 return;
             }
+        };
+
+        let credentials = if staged.requires_credentials {
+            match credentials::get_credentials(&uri, &staged.config_path) {
+                Ok(Some(credentials)) => Some(credentials),
+                Ok(None) => {
+                    log("VPN activation cancelled");
+                    return;
+                }
+                Err(e) => {
+                    log_err(e);
+                    return;
+                }
+            }
+        } else {
+            None
         };
 
         let runtime = match tokio::runtime::Runtime::new() {
@@ -134,7 +155,11 @@ unsafe extern "C" fn on_menu_item_activate(
             }
         };
 
-        match runtime.block_on(nm_dbus::activate_vpn(&staged.session_id, &config_path)) {
+        match runtime.block_on(nm_dbus::activate_vpn(
+            &staged.session_id,
+            &config_path,
+            credentials.as_ref(),
+        )) {
             Ok(()) => log(format!(
                 "VPN connection activated (session {})",
                 staged.session_id
