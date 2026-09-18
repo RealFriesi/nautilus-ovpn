@@ -93,7 +93,10 @@ unsafe fn register_provider_type(module: *mut GTypeModule) {
 // NautilusMenuProvider::get_file_items
 // ---------------------------------------------------------------------
 
-unsafe extern "C" fn free_boxed_uri(data: *mut c_void, _closure: *mut c_void) {
+unsafe extern "C" fn free_boxed_uri(
+    data: glib_sys::gpointer,
+    _closure: *mut gobject_sys::GClosure,
+) {
     drop(Box::from_raw(data as *mut String));
 }
 
@@ -186,13 +189,13 @@ unsafe extern "C" fn get_file_items_trampoline(
         unsafe extern "C" fn(),
     >(on_menu_item_activate);
 
-    ffi::g_signal_connect_data(
-        item as *mut c_void,
+    gobject_sys::g_signal_connect_data(
+        item as *mut gobject_sys::GObject,
         signal_name.as_ptr(),
         Some(handler),
         boxed_uri as *mut c_void,
         Some(free_boxed_uri),
-        0,
+        gobject_sys::G_CONNECT_DEFAULT,
     );
 
     glib_sys::g_list_append(ptr::null_mut(), item as *mut c_void)

@@ -1,0 +1,1 @@
+#include <nautilus-extension.h>
