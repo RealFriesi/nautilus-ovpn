@@ -12,6 +12,7 @@ gio = "0.20"
 glib-sys = "0.20"
 gobject-sys = "0.20"
 gio-sys = "0.20"
+gtk = { package = "gtk4", version = "0.9" }
 libc = "0.2"
 zbus = { version = "4", features = ["tokio"] }
 tokio = { version = "1", features = ["rt-multi-thread"] }
