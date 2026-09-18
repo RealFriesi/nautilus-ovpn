@@ -1,32 +1,17 @@
-//! Minimal, dependency-free parser/patcher for `.ovpn` configuration files.
-//!
-//! It only performs one job: make sure the OpenSSL 3.x legacy provider
-//! directives (`providers legacy default` and `tls-cert-profile legacy`) are
-//! present, without touching anything else in the file - including inline
-//! `<tag>...</tag>` blocks (certs, keys, tls-auth material, ...) and
-//! comments (`#` / `;`).
-
-/// Returns `true` if the trimmed line is a comment.
 fn is_comment(line: &str) -> bool {
     let trimmed = line.trim_start();
     trimmed.starts_with('#') || trimmed.starts_with(';')
 }
 
-/// Returns the first whitespace-separated token of a line, if any.
 fn first_token(line: &str) -> Option<&str> {
-    line.trim_start().split_whitespace().next()
+    line.split_whitespace().next()
 }
 
 fn second_token(line: &str) -> Option<&str> {
-    line.trim_start().split_whitespace().nth(1)
+    line.split_whitespace().nth(1)
 }
 
-/// Returns `true` if the config asks OpenVPN to prompt for username/password.
-///
-/// `auth-user-pass` without a filename means credentials must be supplied at
-/// activation time. If a filename is present, OpenVPN reads credentials from
-/// that file instead.
-pub fn requires_auth_user_pass_prompt(content: &str) -> bool {
+pub(super) fn requires_auth_user_pass_prompt(content: &str) -> bool {
     let mut in_inline_block = false;
 
     for raw_line in content.lines() {
@@ -44,9 +29,7 @@ pub fn requires_auth_user_pass_prompt(content: &str) -> bool {
         }
 
         if trimmed.starts_with('<') && !trimmed.starts_with("</") {
-            if !trimmed.ends_with('>') || trimmed == "<" {
-                in_inline_block = true;
-            } else if !trimmed.contains('/') {
+            if !trimmed.ends_with('>') || !trimmed.contains('/') {
                 in_inline_block = true;
             }
             continue;
@@ -63,13 +46,7 @@ pub fn requires_auth_user_pass_prompt(content: &str) -> bool {
     false
 }
 
-/// Patches the content of an `.ovpn` file so that the OpenSSL 3.x legacy
-/// provider is enabled, unless it is already configured.
-///
-/// Inline blocks delimited by `<tag>` / `</tag>` are copied through
-/// verbatim (including their contents) so binary-ish PEM data is never
-/// inspected or mangled.
-pub fn patch_legacy_provider(content: &str) -> String {
+pub(super) fn patch_legacy_provider(content: &str) -> String {
     let mut has_providers = false;
     let mut has_tls_cert_profile = false;
     let mut in_inline_block = false;
@@ -89,12 +66,7 @@ pub fn patch_legacy_provider(content: &str) -> String {
         }
 
         if trimmed.starts_with('<') && !trimmed.starts_with("</") {
-            // Inline blocks such as <ca>, <cert>, <key>, <tls-auth>, ...
-            if !trimmed.ends_with('>') || trimmed == "<" {
-                in_inline_block = true;
-            } else if !trimmed.contains('/') {
-                // A single-line opening tag like "<ca>" with no closing tag
-                // on the same line; treat as start of a block.
+            if !trimmed.ends_with('>') || !trimmed.contains('/') {
                 in_inline_block = true;
             }
             continue;
@@ -137,23 +109,21 @@ mod tests {
     #[test]
     fn leaves_existing_directives_untouched() {
         let input = "providers legacy default\ntls-cert-profile legacy\nclient\n";
-        let patched = patch_legacy_provider(input);
-        assert_eq!(patched, input);
+        assert_eq!(patch_legacy_provider(input), input);
     }
 
     #[test]
     fn ignores_commented_directives() {
         let input = "# providers legacy default\nclient\n";
-        let patched = patch_legacy_provider(input);
-        assert!(patched.starts_with("providers legacy default\ntls-cert-profile legacy\n"));
+        assert!(patch_legacy_provider(input)
+            .starts_with("providers legacy default\ntls-cert-profile legacy\n"));
     }
 
     #[test]
     fn only_injects_the_missing_one() {
         let input = "providers legacy default\nclient\n";
-        let patched = patch_legacy_provider(input);
         assert_eq!(
-            patched,
+            patch_legacy_provider(input),
             "tls-cert-profile legacy\nproviders legacy default\nclient\n"
         );
     }

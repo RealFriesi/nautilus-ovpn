@@ -1,14 +1,10 @@
-//! Handles copying an `.ovpn` file (and its companion files, e.g. from an
-//! SMB/GVFS share) into a local, `nm-openvpn`-readable staging directory,
-//! and applies the legacy-provider patch to the staged copy.
+mod parser;
 
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
 use gio::prelude::*;
-
-use crate::ovpn_parser;
 
 /// Extensions of companion files that are copied alongside the `.ovpn` file.
 const COMPANION_EXTENSIONS: &[&str] = &["ovpn", "crt", "key", "p12", "pem", "txt"];
@@ -29,9 +25,7 @@ fn log_err(context: &str, err: &impl std::fmt::Display) {
     eprintln!("[nautilus-openvpn] {context}: {err}");
 }
 
-/// Copies `source_uri` (and any companion files living next to it) into a
-/// freshly created staging directory under `/tmp`, then patches the
-/// legacy OpenSSL provider directives into the staged `.ovpn` copy.
+/// Copies `source_uri` and companion files into a local staging directory.
 pub fn stage_ovpn_file(source_uri: &str) -> Result<StagedConfig, String> {
     let source_file = gio::File::for_uri(source_uri);
     let source_name = source_file
@@ -78,7 +72,6 @@ pub fn stage_ovpn_file(source_uri: &str) -> Result<StagedConfig, String> {
 
         let name = info.name();
         let name_str = name.to_string_lossy();
-
         let matches_companion = COMPANION_EXTENSIONS.iter().any(|ext| {
             name_str
                 .rsplit_once('.')
@@ -117,8 +110,8 @@ pub fn stage_ovpn_file(source_uri: &str) -> Result<StagedConfig, String> {
 
     let original_content = fs::read_to_string(&staged_ovpn_path)
         .map_err(|e| format!("failed to read staged .ovpn file: {e}"))?;
-    let requires_credentials = ovpn_parser::requires_auth_user_pass_prompt(&original_content);
-    let patched_content = ovpn_parser::patch_legacy_provider(&original_content);
+    let requires_credentials = parser::requires_auth_user_pass_prompt(&original_content);
+    let patched_content = parser::patch_legacy_provider(&original_content);
     fs::write(&staged_ovpn_path, patched_content)
         .map_err(|e| format!("failed to write patched .ovpn file: {e}"))?;
     fs::set_permissions(&staged_ovpn_path, fs::Permissions::from_mode(0o644))
