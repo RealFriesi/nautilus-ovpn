@@ -51,11 +51,7 @@ pub(super) fn activate_terminal(uri: String) {
 /// if staging failed or the user cancelled the credential prompt (already logged).
 fn stage_and_authenticate(
     uri: &str,
-) -> Option<(
-    StagedConfig,
-    String,
-    Option<credentials::VpnCredentials>,
-)> {
+) -> Option<(StagedConfig, String, Option<credentials::VpnCredentials>)> {
     let staged = match staging::stage_ovpn_file(uri) {
         Ok(staged) => staged,
         Err(e) => {
@@ -97,4 +93,3 @@ fn stage_and_authenticate(
         }
     }
 }
-

@@ -117,4 +117,3 @@ pub(super) unsafe extern "C" fn get_file_items_trampoline(
     }
     list
 }
-

@@ -26,7 +26,10 @@ fn command_exists(name: &str) -> bool {
 }
 
 fn find_terminal() -> Option<(&'static str, &'static [&'static str])> {
-    TERMINALS.iter().find(|(name, _)| command_exists(name)).copied()
+    TERMINALS
+        .iter()
+        .find(|(name, _)| command_exists(name))
+        .copied()
 }
 
 fn shell_quote(value: &str) -> String {
@@ -38,8 +41,8 @@ pub(super) fn launch(
     config_path: &str,
     credentials: Option<&VpnCredentials>,
 ) -> Result<(), String> {
-    let (terminal, prefix_args) =
-        find_terminal().ok_or_else(|| "no supported terminal emulator found in PATH".to_string())?;
+    let (terminal, prefix_args) = find_terminal()
+        .ok_or_else(|| "no supported terminal emulator found in PATH".to_string())?;
 
     let mut openvpn_cmd = format!("pkexec openvpn --config {}", shell_quote(config_path));
     if let Some(credentials) = credentials {

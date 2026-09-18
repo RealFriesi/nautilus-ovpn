@@ -9,15 +9,20 @@ pub struct VpnCredentials {
     pub password: String,
 }
 
+const AUTO_CONNECT_DELAY_SECONDS: i32 = 5;
+
 pub async fn get_credentials(
     config_uri: &str,
     config_path: &Path,
 ) -> Result<Option<VpnCredentials>, String> {
-    if let Some(credentials) = secret_service::lookup(config_uri).await? {
-        return Ok(Some(credentials));
-    }
+    let stored_credentials = secret_service::lookup(config_uri).await?;
 
-    let Some(prompt) = prompt::prompt_for_credentials(config_path)? else {
+    let Some(prompt) = prompt::prompt_for_credentials(
+        config_path,
+        stored_credentials.as_ref(),
+        AUTO_CONNECT_DELAY_SECONDS,
+    )?
+    else {
         return Ok(None);
     };
 

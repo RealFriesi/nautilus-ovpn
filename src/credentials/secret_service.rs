@@ -50,8 +50,6 @@ trait SecretItem {
         &self,
         session: &OwnedObjectPath,
     ) -> zbus::Result<(OwnedObjectPath, Vec<u8>, Vec<u8>, String)>;
-
-    fn locked(&self) -> zbus::Result<bool>;
 }
 
 pub(super) async fn lookup(config_uri: &str) -> Result<Option<VpnCredentials>, String> {
@@ -95,14 +93,6 @@ async fn lookup_in_session(
         .build()
         .await
         .map_err(|e| format!("failed to create Secret Service item proxy: {e}"))?;
-    if item
-        .locked()
-        .await
-        .map_err(|e| format!("failed to inspect Secret Service item: {e}"))?
-    {
-        return Ok(None);
-    }
-
     let (_, _, value, _) = item
         .get_secret(session)
         .await
