@@ -1,6 +1,3 @@
-//! NetworkManager D-Bus integration: registers a volatile, in-memory VPN
-//! connection and activates it immediately.
-
 use std::collections::HashMap;
 
 use uuid::Uuid;
@@ -9,8 +6,6 @@ use zbus::{proxy, Connection};
 
 use crate::credentials::VpnCredentials;
 
-/// `NM_SETTINGS_ADD_CONNECTION2_FLAG_IN_MEMORY`, keeps the connection out of
-/// `/etc/NetworkManager/system-connections/`.
 const ADD_CONNECTION2_FLAG_IN_MEMORY: u32 = 0x2;
 
 #[proxy(
@@ -42,8 +37,6 @@ trait NetworkManager {
     ) -> zbus::Result<OwnedObjectPath>;
 }
 
-/// Registers `config_path` as a volatile OpenVPN connection named
-/// `VPN-<session_id>` and activates it right away.
 pub async fn activate_vpn(
     session_id: &str,
     config_path: &str,
