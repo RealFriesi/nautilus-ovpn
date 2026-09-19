@@ -7,6 +7,8 @@ The extension stages the selected configuration and any companion files in a
 private temporary directory, prompts for credentials if required, then launches
 an available terminal emulator with a rendered OpenVPN command.
 
+This is a direct OpenVPN launcher and no NetworkManager integration is required.
+
 ## Requirements
 
 ### Build dependencies
@@ -43,7 +45,6 @@ sudo dnf install -y \
 ### Runtime dependencies
 
 - `openvpn`
-- the `NetworkManager-openvpn` / `network-manager-openvpn` plugin
 - `pkexec` (polkit) for the elevated OpenVPN launch
 
 ## Build and install
