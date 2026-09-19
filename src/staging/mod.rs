@@ -1,10 +1,12 @@
 mod parser;
 
+use std::fmt::Write;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use gio::prelude::*;
+use sha2::{Digest, Sha256};
 
 /// Extensions of companion files that are copied alongside the `.ovpn` file.
 const COMPANION_EXTENSIONS: &[&str] = &["ovpn", "crt", "key", "p12", "pem", "txt"];
@@ -16,13 +18,51 @@ pub struct StagedConfig {
     pub config_path: PathBuf,
     /// Whether the config contains `auth-user-pass` without a credential file.
     pub requires_credentials: bool,
-    /// Unique session id used both for the staging dir name and the
-    /// NetworkManager connection id.
+    /// Stable ID derived from the selected configuration URI and contents.
     pub session_id: String,
+    /// Human-readable name used for the terminal.
+    pub display_name: String,
 }
 
 fn log_err(context: &str, err: &impl std::fmt::Display) {
     eprintln!("[nautilus-openvpn] {context}: {err}");
+}
+
+fn stable_session_id(source_uri: &str, content: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(source_uri.as_bytes());
+    hasher.update([0]);
+    hasher.update(content.as_bytes());
+
+    let mut id = String::with_capacity(64);
+    for byte in hasher.finalize() {
+        write!(&mut id, "{byte:02x}").expect("writing to a String cannot fail");
+    }
+    id
+}
+
+fn display_name(source_path: Option<&Path>, source_name: &str) -> String {
+    let fallback = Path::new(source_name)
+        .file_stem()
+        .and_then(|name| name.to_str())
+        .unwrap_or(source_name);
+
+    let Some(path) = source_path else {
+        return fallback.to_string();
+    };
+    let Some(parent) = path.parent() else {
+        return fallback.to_string();
+    };
+    if parent == Path::new("/") {
+        return fallback.to_string();
+    }
+
+    parent
+        .file_name()
+        .and_then(|name| name.to_str())
+        .filter(|name| !name.is_empty())
+        .unwrap_or(fallback)
+        .to_string()
 }
 
 /// Copies `source_uri` and companion files into a local staging directory.
@@ -37,7 +77,15 @@ pub fn stage_ovpn_file(source_uri: &str) -> Result<StagedConfig, String> {
         .parent()
         .ok_or_else(|| "selected .ovpn file has no parent directory".to_string())?;
 
-    let session_id = uuid::Uuid::new_v4().simple().to_string();
+    let source_path = source_file.path();
+    let display_name = display_name(source_path.as_deref(), &source_name);
+    let original_content = source_file
+        .load_contents(gio::Cancellable::NONE)
+        .map_err(|e| format!("failed to read selected .ovpn file: {e}"))?
+        .0;
+    let original_content = String::from_utf8(original_content.to_vec())
+        .map_err(|e| format!("selected .ovpn file is not valid UTF-8: {e}"))?;
+    let session_id = stable_session_id(source_uri, &original_content);
     let staging_dir = PathBuf::from(format!("/tmp/nm-ovpn-{session_id}"));
 
     if staging_dir.exists() {
@@ -108,19 +156,46 @@ pub fn stage_ovpn_file(source_uri: &str) -> Result<StagedConfig, String> {
         ));
     }
 
-    let original_content = fs::read_to_string(&staged_ovpn_path)
-        .map_err(|e| format!("failed to read staged .ovpn file: {e}"))?;
     let requires_credentials = parser::requires_auth_user_pass_prompt(&original_content);
-    let patched_content = parser::patch_legacy_provider(&original_content);
-    fs::write(&staged_ovpn_path, patched_content)
-        .map_err(|e| format!("failed to write patched .ovpn file: {e}"))?;
     fs::set_permissions(&staged_ovpn_path, fs::Permissions::from_mode(0o644))
-        .map_err(|e| format!("failed to chmod patched .ovpn file: {e}"))?;
+        .map_err(|e| format!("failed to chmod staged .ovpn file: {e}"))?;
 
     Ok(StagedConfig {
         dir: staging_dir,
         config_path: staged_ovpn_path,
         requires_credentials,
         session_id,
+        display_name,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{display_name, stable_session_id};
+    use std::path::Path;
+
+    #[test]
+    fn session_id_is_stable_and_changes_with_config_content() {
+        let id = stable_session_id("file:///vpn/example.ovpn", "client\n");
+        assert_eq!(
+            id,
+            stable_session_id("file:///vpn/example.ovpn", "client\n")
+        );
+        assert_ne!(
+            id,
+            stable_session_id("file:///vpn/example.ovpn", "client\nremote other\n")
+        );
+    }
+
+    #[test]
+    fn display_name_prefers_parent_directory_except_at_root() {
+        assert_eq!(
+            display_name(Some(Path::new("/vpn/work/example.ovpn")), "example.ovpn"),
+            "work"
+        );
+        assert_eq!(
+            display_name(Some(Path::new("/example.ovpn")), "example.ovpn"),
+            "example"
+        );
+    }
 }

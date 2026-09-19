@@ -11,14 +11,6 @@ pub(super) unsafe extern "C" fn free_boxed_uri(
     drop(Box::from_raw(data as *mut String));
 }
 
-unsafe extern "C" fn on_activate_network_manager(
-    _item: *mut ffi::NautilusMenuItem,
-    user_data: *mut c_void,
-) {
-    let uri = (*(user_data as *const String)).clone();
-    super::activation::activate(uri);
-}
-
 unsafe extern "C" fn on_activate_terminal(
     _item: *mut ffi::NautilusMenuItem,
     user_data: *mut c_void,
@@ -91,14 +83,6 @@ pub(super) unsafe extern "C" fn get_file_items_trampoline(
         return ptr::null_mut();
     }
 
-    let nm_item = build_menu_item(
-        "OvpnConnect::connect_nm",
-        "Verbinde über NetworkManager",
-        "OpenVPN-Verbindung als flüchtige NetworkManager-Verbindung starten",
-        "network-vpn",
-        &uri,
-        on_activate_network_manager,
-    );
     let terminal_item = build_menu_item(
         "OvpnConnect::connect_terminal",
         "Verbinde im Terminal",
@@ -109,9 +93,6 @@ pub(super) unsafe extern "C" fn get_file_items_trampoline(
     );
 
     let mut list = ptr::null_mut();
-    if !nm_item.is_null() {
-        list = glib_sys::g_list_append(list, nm_item as *mut c_void);
-    }
     if !terminal_item.is_null() {
         list = glib_sys::g_list_append(list, terminal_item as *mut c_void);
     }

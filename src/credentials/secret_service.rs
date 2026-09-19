@@ -60,7 +60,7 @@ pub(super) async fn lookup(config_uri: &str) -> Result<Option<VpnCredentials>, S
         .await
         .map_err(|e| format!("failed to create Secret Service proxy: {e}"))?;
     let (_, session) = service
-        .open_session("plain", Value::from(Vec::<u8>::new()))
+        .open_session("plain", Value::from(""))
         .await
         .map_err(|e| format!("failed to open Secret Service session: {e}"))?;
 
@@ -119,7 +119,7 @@ pub(super) async fn store(
         .await
         .map_err(|e| format!("failed to create Secret Service proxy: {e}"))?;
     let (_, session) = service
-        .open_session("plain", Value::from(Vec::<u8>::new()))
+        .open_session("plain", Value::from(""))
         .await
         .map_err(|e| format!("failed to open Secret Service session: {e}"))?;
     let collection = service
@@ -148,7 +148,14 @@ pub(super) async fn store(
     let secret = (
         session.clone(),
         Vec::new(),
-        format!("{}\n{}", credentials.username, credentials.password).into_bytes(),
+        format!(
+            "{}\n{}\n{}\n{}",
+            credentials.username,
+            credentials.password,
+            credentials.private_key_password,
+            credentials.legacy_auth
+        )
+        .into_bytes(),
         "text/plain",
     );
     collection

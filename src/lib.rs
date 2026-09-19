@@ -2,7 +2,6 @@
 
 mod credentials;
 mod ffi;
-mod network_manager;
 mod provider;
 mod staging;
 

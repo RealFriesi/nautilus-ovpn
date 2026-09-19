@@ -1,36 +1,10 @@
 use std::thread;
 
 use crate::staging::StagedConfig;
-use crate::{credentials, network_manager, staging};
-
-pub(super) fn activate(uri: String) {
-    crate::log(format!("connecting to {uri}"));
-
-    thread::spawn(move || {
-        let Some((staged, config_path, credentials)) = stage_and_authenticate(&uri) else {
-            return;
-        };
-
-        match tokio::runtime::Runtime::new()
-            .map_err(|e| format!("failed to start tokio runtime: {e}"))
-            .and_then(|runtime| {
-                runtime.block_on(network_manager::activate_vpn(
-                    &staged.session_id,
-                    &config_path,
-                    credentials.as_ref(),
-                ))
-            }) {
-            Ok(()) => crate::log(format!(
-                "VPN connection activated (session {})",
-                staged.session_id
-            )),
-            Err(e) => crate::log_err(e),
-        }
-    });
-}
+use crate::{credentials, staging};
 
 pub(super) fn activate_terminal(uri: String) {
-    crate::log(format!("connecting to {uri} in a terminal"));
+    crate::log(format!("starting OpenVPN terminal for {uri}"));
 
     thread::spawn(move || {
         let Some((staged, config_path, credentials)) = stage_and_authenticate(&uri) else {
@@ -39,7 +13,7 @@ pub(super) fn activate_terminal(uri: String) {
 
         match super::terminal::launch(&staged, &config_path, credentials.as_ref()) {
             Ok(()) => crate::log(format!(
-                "VPN terminal session started (session {})",
+                "VPN terminal started (session {})",
                 staged.session_id
             )),
             Err(e) => crate::log_err(e),
@@ -47,8 +21,8 @@ pub(super) fn activate_terminal(uri: String) {
     });
 }
 
-/// Stages the `.ovpn` file and, if required, obtains credentials. Returns `None`
-/// if staging failed or the user cancelled the credential prompt (already logged).
+/// Stages the `.ovpn` file and obtains connection options. Returns `None` if
+/// staging failed or the user cancelled the options prompt (already logged).
 fn stage_and_authenticate(
     uri: &str,
 ) -> Option<(StagedConfig, String, Option<credentials::VpnCredentials>)> {
@@ -69,10 +43,6 @@ fn stage_and_authenticate(
         }
     };
 
-    if !staged.requires_credentials {
-        return Some((staged, config_path, None));
-    }
-
     let runtime = match tokio::runtime::Runtime::new() {
         Ok(runtime) => runtime,
         Err(e) => {
@@ -81,7 +51,11 @@ fn stage_and_authenticate(
         }
     };
 
-    match runtime.block_on(credentials::get_credentials(uri, &staged.config_path)) {
+    match runtime.block_on(credentials::get_credentials(
+        uri,
+        &staged.config_path,
+        staged.requires_credentials,
+    )) {
         Ok(Some(credentials)) => Some((staged, config_path, Some(credentials))),
         Ok(None) => {
             crate::log("VPN activation cancelled");
