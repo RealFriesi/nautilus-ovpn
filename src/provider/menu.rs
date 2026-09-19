@@ -11,12 +11,52 @@ pub(super) unsafe extern "C" fn free_boxed_uri(
     drop(Box::from_raw(data as *mut String));
 }
 
-unsafe extern "C" fn on_menu_item_activate(
+unsafe extern "C" fn on_activate_terminal(
     _item: *mut ffi::NautilusMenuItem,
     user_data: *mut c_void,
 ) {
     let uri = (*(user_data as *const String)).clone();
-    super::activation::activate(uri);
+    super::activation::activate_terminal(uri);
+}
+
+unsafe fn build_menu_item(
+    name: &str,
+    label: &str,
+    tip: &str,
+    icon: &str,
+    uri: &str,
+    handler: unsafe extern "C" fn(*mut ffi::NautilusMenuItem, *mut c_void),
+) -> *mut ffi::NautilusMenuItem {
+    let name = CString::new(name).expect("static string");
+    let label = CString::new(label).expect("static string");
+    let tip = CString::new(tip).expect("static string");
+    let icon = CString::new(icon).expect("static string");
+
+    let item =
+        ffi::nautilus_menu_item_new(name.as_ptr(), label.as_ptr(), tip.as_ptr(), icon.as_ptr());
+    if item.is_null() {
+        crate::log_err("nautilus_menu_item_new returned NULL");
+        return ptr::null_mut();
+    }
+
+    let boxed_uri = Box::into_raw(Box::new(uri.to_string()));
+    let signal_name = CString::new("activate").expect("static string");
+
+    let handler: unsafe extern "C" fn() = std::mem::transmute::<
+        unsafe extern "C" fn(*mut ffi::NautilusMenuItem, *mut c_void),
+        unsafe extern "C" fn(),
+    >(handler);
+
+    gobject_sys::g_signal_connect_data(
+        item as *mut gobject_sys::GObject,
+        signal_name.as_ptr(),
+        Some(handler),
+        boxed_uri as *mut c_void,
+        Some(free_boxed_uri),
+        gobject_sys::G_CONNECT_DEFAULT,
+    );
+
+    item
 }
 
 pub(super) unsafe extern "C" fn get_file_items_trampoline(
@@ -43,35 +83,18 @@ pub(super) unsafe extern "C" fn get_file_items_trampoline(
         return ptr::null_mut();
     }
 
-    let name = CString::new("OvpnConnect::connect").expect("static string");
-    let label = CString::new("Mit VPN verbinden").expect("static string");
-    let tip = CString::new("OpenVPN-Verbindung als flüchtige NetworkManager-Verbindung starten")
-        .expect("static string");
-    let icon = CString::new("network-vpn").expect("static string");
-
-    let item =
-        ffi::nautilus_menu_item_new(name.as_ptr(), label.as_ptr(), tip.as_ptr(), icon.as_ptr());
-    if item.is_null() {
-        crate::log_err("nautilus_menu_item_new returned NULL");
-        return ptr::null_mut();
-    }
-
-    let boxed_uri = Box::into_raw(Box::new(uri));
-    let signal_name = CString::new("activate").expect("static string");
-
-    let handler: unsafe extern "C" fn() = std::mem::transmute::<
-        unsafe extern "C" fn(*mut ffi::NautilusMenuItem, *mut c_void),
-        unsafe extern "C" fn(),
-    >(on_menu_item_activate);
-
-    gobject_sys::g_signal_connect_data(
-        item as *mut gobject_sys::GObject,
-        signal_name.as_ptr(),
-        Some(handler),
-        boxed_uri as *mut c_void,
-        Some(free_boxed_uri),
-        gobject_sys::G_CONNECT_DEFAULT,
+    let terminal_item = build_menu_item(
+        "OvpnConnect::connect_terminal",
+        "Verbinde im Terminal",
+        "OpenVPN-Verbindung im Terminal starten",
+        "utilities-terminal",
+        &uri,
+        on_activate_terminal,
     );
 
-    glib_sys::g_list_append(ptr::null_mut(), item as *mut c_void)
+    let mut list = ptr::null_mut();
+    if !terminal_item.is_null() {
+        list = glib_sys::g_list_append(list, terminal_item as *mut c_void);
+    }
+    list
 }

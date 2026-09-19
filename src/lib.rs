@@ -2,7 +2,6 @@
 
 mod credentials;
 mod ffi;
-mod network_manager;
 mod provider;
 mod staging;
 
@@ -22,6 +21,12 @@ pub(crate) fn log_err(msg: impl AsRef<str>) {
 #[no_mangle]
 pub unsafe extern "C" fn nautilus_module_initialize(module: *mut gobject_sys::GTypeModule) {
     log("initializing extension module");
+    if !gtk::is_initialized() {
+        if let Err(error) = gtk::init() {
+            log_err(format!("failed to initialize GTK: {error}"));
+            return;
+        }
+    }
     provider::initialize(module);
 }
 

@@ -8,8 +8,8 @@ fn main() {
         .allowlist_function("nautilus_menu_provider_get_type")
         .allowlist_function("nautilus_menu_item_new")
         .allowlist_function("nautilus_file_info_get_uri")
-        .allowlist_type("Nautilus(MenuProviderInterface|MenuProvider|MenuItem|FileInfo|Menu)")
-        .allowlist_type("_Nautilus(MenuProviderInterface|MenuProvider|MenuItem|FileInfo|Menu)")
+        .allowlist_type("Nautilus(MenuProvider|MenuItem|FileInfo|Menu)")
+        .allowlist_type("_Nautilus(MenuProvider|MenuItem|FileInfo|Menu)")
         .blocklist_type("GList")
         .blocklist_type("GType")
         .blocklist_type("GObject")
@@ -19,11 +19,9 @@ fn main() {
         .opaque_type("NautilusFileInfo")
         .opaque_type("NautilusMenu")
         .opaque_type("NautilusMenuItem")
-        .opaque_type("NautilusMenuProvider")
         .opaque_type("_NautilusFileInfo")
         .opaque_type("_NautilusMenu")
         .opaque_type("_NautilusMenuItem")
-        .opaque_type("_NautilusMenuProvider")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()));
 
     for include_path in deps.all_include_paths() {
