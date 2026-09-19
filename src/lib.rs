@@ -16,8 +16,8 @@ pub(crate) fn log_err(msg: impl AsRef<str>) {
 }
 
 /// # Safety
-/// Called by Nautilus with a valid `GTypeModule*` while loading this shared
-/// object as an extension module.
+/// Nautilus calls this during extension loading. The GTK runtime is initialized
+/// once and the provider type is registered with the module.
 #[no_mangle]
 pub unsafe extern "C" fn nautilus_module_initialize(module: *mut gobject_sys::GTypeModule) {
     log("initializing extension module");

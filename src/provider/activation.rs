@@ -6,6 +6,8 @@ use crate::{credentials, staging};
 pub(super) fn activate_terminal(uri: String) {
     crate::log(format!("starting OpenVPN terminal for {uri}"));
 
+    // The activation work is intentionally moved into a background thread so the
+    // Nautilus menu callback returns promptly while OpenVPN setup continues.
     thread::spawn(move || {
         let Some((staged, config_path, credentials)) = stage_and_authenticate(&uri) else {
             return;

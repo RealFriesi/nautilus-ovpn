@@ -1,6 +1,8 @@
 use std::{env, path::PathBuf};
 
 fn main() {
+    // Build-time setup for the Nautilus GTK extension: detect the required
+    // library paths and generate the Rust bindings used by the extension code.
     let deps = system_deps::Config::new().probe().unwrap();
 
     let mut bindings = bindgen::Builder::default()

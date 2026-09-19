@@ -4,6 +4,8 @@ use std::ptr;
 
 use crate::ffi;
 
+// GTK stores the selected file URI as boxed user data for the signal callback.
+// This callback owns and frees the boxed String when the signal is destroyed.
 pub(super) unsafe extern "C" fn free_boxed_uri(
     data: glib_sys::gpointer,
     _closure: *mut gobject_sys::GClosure,
@@ -11,6 +13,8 @@ pub(super) unsafe extern "C" fn free_boxed_uri(
     drop(Box::from_raw(data as *mut String));
 }
 
+// The signal handler re-creates the URI from the boxed payload and starts the
+// VPN activation flow in a worker thread.
 unsafe extern "C" fn on_activate_terminal(
     _item: *mut ffi::NautilusMenuItem,
     user_data: *mut c_void,

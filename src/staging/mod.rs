@@ -28,6 +28,9 @@ fn log_err(context: &str, err: &impl std::fmt::Display) {
     eprintln!("[nautilus-openvpn] {context}: {err}");
 }
 
+// A stable, content-aware identifier used to derive a unique staging directory.
+// This keeps the temporary folder deterministic for the same config while
+// changing the file or URI produces a new session.
 fn stable_session_id(source_uri: &str, content: &str) -> String {
     let mut hasher = Sha256::new();
     hasher.update(source_uri.as_bytes());
