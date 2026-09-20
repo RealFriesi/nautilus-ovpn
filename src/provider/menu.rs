@@ -89,8 +89,8 @@ pub(super) unsafe extern "C" fn get_file_items_trampoline(
 
     let terminal_item = build_menu_item(
         "OvpnConnect::connect_terminal",
-        "Verbinde im Terminal",
-        "OpenVPN-Verbindung im Terminal starten",
+        &crate::i18n::translate("Connect in Terminal"),
+        &crate::i18n::translate("Start the OpenVPN connection in a terminal"),
         "utilities-terminal",
         &uri,
         on_activate_terminal,

@@ -32,16 +32,24 @@ jobs:
             libgtk-4-dev \
             libclang-dev \
             libnautilus-extension-dev \
+            gettext \
             pkg-config
 
       - name: Build release library
         run: cargo build --release --locked
 
-      - name: Upload shared library
+      - name: Build translation catalog
+        run: |
+          mkdir -p release-assets/share/locale/de/LC_MESSAGES
+          msgfmt po/de.po \
+            -o release-assets/share/locale/de/LC_MESSAGES/nautilus-ovpn.mo
+          cp target/release/libnautilus_ovpn.so release-assets/
+
+      - name: Upload release assets
         uses: actions/upload-artifact@v4
         with:
           name: libnautilus_ovpn-${{ runner.os }}-${{ github.sha }}
-          path: target/release/libnautilus_ovpn.so
+          path: release-assets
           if-no-files-found: error
 
   release:
@@ -74,4 +82,5 @@ jobs:
           fi
           gh release upload "$RELEASE_TAG" \
             release-assets/libnautilus_ovpn.so \
+            release-assets/share/locale/de/LC_MESSAGES/nautilus-ovpn.mo \
             --clobber

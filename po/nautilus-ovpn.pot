@@ -1,0 +1,47 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: nautilus-ovpn 0.1.3\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Connect in Terminal"
+msgstr ""
+
+msgid "Start the OpenVPN connection in a terminal"
+msgstr ""
+
+msgid "VPN options for"
+msgstr ""
+
+msgid "This VPN connection requires credentials."
+msgstr ""
+
+msgid "This VPN connection does not require credentials."
+msgstr ""
+
+msgid "Username"
+msgstr ""
+
+msgid "Password"
+msgstr ""
+
+msgid "Private key password (optional)"
+msgstr ""
+
+msgid "Legacy authentication"
+msgstr ""
+
+msgid "Save credentials"
+msgstr ""
+
+msgid "Save settings"
+msgstr ""
+
+msgid "Cancel"
+msgstr ""
+
+msgid "Connect"
+msgstr ""
+
+msgid "Connection ended. Press Enter to close."
+msgstr ""

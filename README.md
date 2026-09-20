@@ -33,7 +33,8 @@ sudo apt-get install -y --no-install-recommends \
   libclang-dev \
   libglib2.0-dev \
   libgtk-4-dev \
-  libnautilus-extension-dev
+  libnautilus-extension-dev \
+  gettext
 ```
 
 #### Fedora
@@ -45,7 +46,8 @@ sudo dnf install -y \
   clang-devel \
   glib2-devel \
   gtk4-devel \
-  nautilus-devel
+  nautilus-devel \
+  gettext
 ```
 
 ### Runtime dependencies
@@ -60,7 +62,9 @@ cargo build --release
 ```
 
 The compiled shared library is `target/release/libnautilus_ovpn.so`.
-Copy it into the Nautilus extension directory and restart Nautilus:
+The default UI language is English. German translations are provided as a
+gettext catalog and must be installed alongside the shared library. Copy both
+the library and the locale catalog, then restart Nautilus:
 
 ```sh
 nautilus -q
@@ -71,6 +75,8 @@ On Fedora:
 ```sh
 sudo install -Dm755 target/release/libnautilus_ovpn.so \
   /usr/lib64/nautilus/extensions-4/libnautilus_ovpn.so
+sudo install -Dm644 target/locale/de/LC_MESSAGES/nautilus-ovpn.mo \
+  /usr/share/locale/de/LC_MESSAGES/nautilus-ovpn.mo
 ```
 
 On Debian/Ubuntu, the usual location is:
@@ -78,6 +84,26 @@ On Debian/Ubuntu, the usual location is:
 ```sh
 /usr/lib/x86_64-linux-gnu/nautilus/extensions-4
 ```
+
+Install the shared library and catalog on Debian/Ubuntu with:
+
+```sh
+sudo install -Dm755 target/release/libnautilus_ovpn.so \
+  /usr/lib/x86_64-linux-gnu/nautilus/extensions-4/libnautilus_ovpn.so
+sudo install -Dm644 target/locale/de/LC_MESSAGES/nautilus-ovpn.mo \
+  /usr/share/locale/de/LC_MESSAGES/nautilus-ovpn.mo
+```
+
+For a source checkout, create the catalog before installing it:
+
+```sh
+mkdir -p target/locale/de/LC_MESSAGES
+msgfmt po/de.po -o target/locale/de/LC_MESSAGES/nautilus-ovpn.mo
+```
+
+If the locale files are installed below a different prefix, set
+`NAUTILUS_OVPN_LOCALEDIR` to that prefix's `share/locale` directory before
+starting Nautilus.
 
 ## How the extension works
 
