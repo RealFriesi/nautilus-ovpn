@@ -9,6 +9,12 @@ an available terminal emulator with a rendered OpenVPN command.
 
 This is a direct OpenVPN launcher and no NetworkManager integration is required.
 
+## Note
+
+This project was originally developed for personal use, but you are welcome to
+use it and adapt it to your own needs. It was developed with the assistance of
+AI.
+
 ## Requirements
 
 ### Build dependencies
