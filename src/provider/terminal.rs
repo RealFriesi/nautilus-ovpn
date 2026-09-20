@@ -62,7 +62,7 @@ set -o pipefail
 pkexec openvpn{% if legacy_auth %} --providers legacy default{% endif %} --cd {{ staging_dir }} --config {{ config_path }}{% if auth_path %} --auth-user-pass {{ auth_path }}{% endif %}{% if private_key_password_path %} --askpass {{ private_key_password_path }}{% endif %} 2>&1 | tee {{ log_path }}
 status=$?
 echo
-read -rp 'Verbindung beendet. Enter zum Schließen drücken.'
+read -rp {{ finished_prompt }}
 exit "$status"
 """
 "#;
@@ -123,6 +123,9 @@ pub(super) fn launch(
                 .map(|path| shell_quote(&path.to_string_lossy()))
                 .unwrap_or_default(),
             log_path => shell_quote(&log_path.to_string_lossy()),
+            finished_prompt => shell_quote(&crate::i18n::translate(
+                "Connection ended. Press Enter to close.",
+            )),
         },
     )?;
     let args = terminal
@@ -275,6 +278,7 @@ mod tests {
                 auth_path => "",
                 private_key_password_path => "",
                 log_path => "'/tmp/vpn/openvpn.log'",
+                finished_prompt => "'Connection ended. Press Enter to close.'",
             },
         )
         .expect("default command renders");

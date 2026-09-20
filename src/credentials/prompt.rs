@@ -21,7 +21,8 @@ pub(super) fn prompt_for_credentials(
     requires_user_pass: bool,
 ) -> PromptResult {
     let title = format!(
-        "VPN-Optionen für {}",
+        "{} {}",
+        crate::i18n::translate("VPN options for"),
         config_path
             .file_name()
             .and_then(|name| name.to_str())
@@ -73,15 +74,16 @@ fn show_dialog(
     content.set_margin_start(16);
     content.set_margin_end(16);
 
-    let info_label = gtk::Label::new(Some(if requires_user_pass {
-        "Diese VPN-Verbindung benötigt Anmeldedaten."
+    let info_text = if requires_user_pass {
+        crate::i18n::translate("This VPN connection requires credentials.")
     } else {
-        "Diese VPN-Verbindung benötigt keine Anmeldedaten."
-    }));
+        crate::i18n::translate("This VPN connection does not require credentials.")
+    };
+    let info_label = gtk::Label::new(Some(&info_text));
     info_label.set_halign(gtk::Align::Start);
     content.append(&info_label);
 
-    let username_label = gtk::Label::new(Some("Benutzername"));
+    let username_label = gtk::Label::new(Some(&crate::i18n::translate("Username")));
     username_label.set_halign(gtk::Align::Start);
     content.append(&username_label);
     let username_entry = gtk::Entry::new();
@@ -91,7 +93,7 @@ fn show_dialog(
     }
     content.append(&username_entry);
 
-    let password_label = gtk::Label::new(Some("Passwort"));
+    let password_label = gtk::Label::new(Some(&crate::i18n::translate("Password")));
     password_label.set_halign(gtk::Align::Start);
     content.append(&password_label);
     let password_entry = gtk::PasswordEntry::new();
@@ -102,8 +104,9 @@ fn show_dialog(
     }
     content.append(&password_entry);
 
-    let private_key_password_label =
-        gtk::Label::new(Some("Passwort des privaten Schlüssels (optional)"));
+    let private_key_password_label = gtk::Label::new(Some(&crate::i18n::translate(
+        "Private key password (optional)",
+    )));
     private_key_password_label.set_halign(gtk::Align::Start);
     content.append(&private_key_password_label);
     let private_key_password_entry = gtk::PasswordEntry::new();
@@ -113,7 +116,8 @@ fn show_dialog(
     }
     content.append(&private_key_password_entry);
 
-    let legacy_auth_check = gtk::CheckButton::with_label("Legacy-Authentifizierung");
+    let legacy_auth_check =
+        gtk::CheckButton::with_label(&crate::i18n::translate("Legacy authentication"));
     legacy_auth_check.set_active(
         stored_credentials
             .as_ref()
@@ -122,21 +126,25 @@ fn show_dialog(
     );
     content.append(&legacy_auth_check);
 
-    let save_check = gtk::CheckButton::with_label(if requires_user_pass {
-        "Anmeldedaten speichern"
+    let save_label = if requires_user_pass {
+        crate::i18n::translate("Save credentials")
     } else {
-        "Einstellungen speichern"
-    });
+        crate::i18n::translate("Save settings")
+    };
+    let save_check = gtk::CheckButton::with_label(&save_label);
     save_check.set_active(stored_credentials.is_some());
     content.append(&save_check);
 
     let button_box = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     button_box.set_halign(gtk::Align::End);
-    let cancel_button = gtk::Button::with_label("Abbrechen");
+    let cancel_button = gtk::Button::with_label(&crate::i18n::translate("Cancel"));
     let connect_label = if stored_credentials.is_some() {
-        format!("Verbinden ({auto_connect_delay_seconds})")
+        format!(
+            "{} ({auto_connect_delay_seconds})",
+            crate::i18n::translate("Connect")
+        )
     } else {
-        "Verbinden".to_string()
+        crate::i18n::translate("Connect")
     };
     let connect_button = gtk::Button::with_label(&connect_label);
     connect_button.add_css_class("suggested-action");
@@ -175,7 +183,7 @@ fn show_dialog(
         let save_for_timer = save_check.clone();
         glib::timeout_add_seconds_local(1, move || {
             if credentials_changed_for_timer.get() {
-                button_for_timer.set_label("Verbinden");
+                button_for_timer.set_label(&crate::i18n::translate("Connect"));
                 return glib::ControlFlow::Break;
             }
 
@@ -195,7 +203,8 @@ fn show_dialog(
                 window_for_timer.close();
                 glib::ControlFlow::Break
             } else {
-                button_for_timer.set_label(&format!("Verbinden ({next})"));
+                button_for_timer
+                    .set_label(&format!("{} ({next})", crate::i18n::translate("Connect")));
                 glib::ControlFlow::Continue
             }
         });
