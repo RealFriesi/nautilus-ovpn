@@ -1,13 +1,14 @@
 # nautilus-ovpn
 
 Nautilus (GNOME Files) extension that adds a context-menu action for `.ovpn`
-files and starts an OpenVPN connection in a terminal via `pkexec`.
+files and manages an OpenVPN 3 Linux session over the system D-Bus.
 
-The extension stages the selected configuration and any companion files in a
-private temporary directory, prompts for credentials if required, then launches
-an available terminal emulator with a rendered OpenVPN command.
+The extension embeds referenced profile files directly into a temporary OpenVPN
+3 D-Bus configuration, collects credentials in GTK dialogs, and starts no
+terminal, shell, or OpenVPN CLI process.
 
-This is a direct OpenVPN launcher and no NetworkManager integration is required.
+This uses the OpenVPN 3 Linux D-Bus services directly and does not require
+NetworkManager integration.
 
 ## Note
 
@@ -52,8 +53,8 @@ sudo dnf install -y \
 
 ### Runtime dependencies
 
-- `openvpn`
-- `pkexec` (polkit) for the elevated OpenVPN launch
+- OpenVPN 3 Linux and its system-bus services
+- A Secret Service keyring (for example GNOME Keyring)
 
 ## Build and install
 
@@ -107,66 +108,50 @@ starting Nautilus.
 
 ## How the extension works
 
-For each selected configuration, the extension creates a staging directory
-whose name is derived from the configuration URI and the file contents. If the
-URI or the content changes, a new staging directory is created.
+For each selected configuration, the extension reads the `.ovpn` file and its
+referenced companion files directly through GIO. It computes an XXH3-128 profile
+hash from the profile contents for Secret Service lookup; the source URI is not
+part of the keyring identity. No temporary profile directory is created.
 
-The staging process:
+The activation process:
 
-1. reads the selected `.ovpn` file
-2. copies companion files such as `.crt`, `.key`, `.p12`, `.pem`, and `.txt`
-3. detects whether the config requires `auth-user-pass`
-4. asks for credentials and optional extra settings if needed
-5. launches a terminal with a generated OpenVPN command
+1. reads the selected `.ovpn` file and companion files directly from their source
+2. embeds external certificates and keys into the in-memory D-Bus payload
+3. imports the profile with `single_use=true` and `persistent=false`
+4. creates a session through `net.openvpn.v3.sessions.NewTunnel`
+5. handles `AttentionRequired` and the session input queue using GTK dialogs
+6. calls `Ready`, `Connect`, and, on request, `Disconnect`
+7. releases the in-memory profile payload after the session finishes
 
-## Credentials and options
+## Credentials
 
-The credential dialog stores the selected legacy-authentication setting together
-with the VPN credentials. A private-key password is optional and only needed
-when the PKCS#12 file is protected by one.
+When OpenVPN requests input, the extension checks the Secret Service before
+opening a GTK dialog. Passwords, proxy credentials, and private-key passphrases
+can be saved. Dynamic challenge/TOTP inputs are never saved. OpenVPN's input
+type, group, ID, description, and hidden-input flag drive the prompt and reply.
 
-If legacy authentication is enabled, the OpenVPN command adds:
+GTK dialogs run on Nautilus' GLib main context. D-Bus work runs on a Tokio
+worker and exchanges prompt requests and replies through asynchronous channels.
+No terminal-emulator configuration is created or consulted.
 
-```sh
---providers legacy default
-```
+## Hooks
 
-The options dialog also opens for configurations without `auth-user-pass`, so
-that legacy authentication and a private-key password can still be selected.
-In that case, the username and password fields are disabled and no
-`--auth-user-pass` argument is passed to OpenVPN.
+Optional Rhai hooks can be placed in
+`$XDG_CONFIG_HOME/nautilus-ovpn/hooks/` (normally
+`~/.config/nautilus-ovpn/hooks/`). `pre-connect.rhai` runs before the D-Bus
+`Connect` call; returning `false`, a non-zero integer, or throwing an error
+aborts the connection. `post-disconnect.rhai` runs after the session ends.
 
-The "Einstellungen speichern" option is only enabled after it has been selected
-explicitly. Legacy authentication and saving are disabled by default. A saved
-options set may contain empty username/password values; if it is loaded from the
-keyring, the next activation starts automatically after five seconds unless the
-user changes a control or cancels the dialog.
+Hooks receive a mutable `context` with `config` and `dbus_payload` maps. Use
+`context.get_config(key)`, `context.set_config(key, value)`,
+`context.get_dbus_payload(key)`, and `context.set_dbus_payload(key, value)`.
+Payload mutation is prepared for future D-Bus options; it does not yet change
+the parameters sent to OpenVPN 3.
 
-## Terminal configuration
+Example `pre-connect.rhai`:
 
-On first use, the extension creates
-`$XDG_CONFIG_HOME/nautilus-ovpn/terminal.toml` (normally
-`~/.config/nautilus-ovpn/terminal.toml`). The generated file contains ordered
-launcher templates for Ptyxis, Ghostty, Kitty, Alacritty, GNOME Terminal,
-Konsole, Xfce Terminal, Tilix, Foot, and Xterm.
-
-The first configured `program` found in `PATH` is used, so the extension can
-work with several supported terminal emulators without hard-coded detection.
-Existing user configurations are not overwritten.
-
-The templates use MiniJinja syntax:
-
-- `{{ command }}` is the rendered OpenVPN shell command
-- `{{ title }}` is the connection name
-- the command template may use `{% if legacy_auth %}...{% endif %}`
-- paths passed into the template (`staging_dir`, `config_path`, `auth_path`,
-  `private_key_password_path`, and `log_path`) are already shell-quoted
-
-Example: to prefer Kitty while keeping the other templates as fallbacks,
-insert this entry before the other `[[terminal]]` entries:
-
-```toml
-[[terminal]]
-program = "kitty"
-args = ["--title", "{{ title }}", "bash", "-lc", "{{ command }}"]
+```rhai
+let profile = context.get_config("profile_name");
+context.set_dbus_payload("audit_profile", profile);
+true
 ```

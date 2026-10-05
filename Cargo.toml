@@ -15,13 +15,17 @@ gobject-sys = "0.20"
 gio-sys = "0.20"
 gtk = { package = "gtk4", version = "0.9" }
 libc = "0.2"
-minijinja = "2"
-serde = { version = "1", features = ["derive"] }
-sha2 = "0.10"
-toml = "0.8"
+base64 = "0.22"
+oo7 = { version = "0.4", default-features = false, features = [
+    "native_crypto",
+    "tokio",
+] }
+rhai = "1"
+futures-util = "0.3"
 zbus = { version = "4", features = ["tokio"] }
-tokio = { version = "1", features = ["rt-multi-thread"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync"] }
 uuid = { version = "1", features = ["v4"] }
+xxhash-rust = { version = "0.8", features = ["xxh3"] }
 
 [build-dependencies]
 bindgen = "0.71"

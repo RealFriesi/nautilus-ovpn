@@ -1,10 +1,12 @@
 //! Nautilus menu-provider extension for activating OpenVPN configurations.
 
-mod credentials;
 mod ffi;
 mod i18n;
+mod keyring;
 mod provider;
-mod staging;
+mod scripting;
+mod ui;
+mod vpn;
 
 use std::os::raw::c_int;
 
@@ -29,6 +31,7 @@ pub unsafe extern "C" fn nautilus_module_initialize(module: *mut gobject_sys::GT
             return;
         }
     }
+    ui::initialize();
     provider::initialize(module);
 }
 

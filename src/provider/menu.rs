@@ -15,12 +15,12 @@ pub(super) unsafe extern "C" fn free_boxed_uri(
 
 // The signal handler re-creates the URI from the boxed payload and starts the
 // VPN activation flow in a worker thread.
-unsafe extern "C" fn on_activate_terminal(
+unsafe extern "C" fn on_activate_connection(
     _item: *mut ffi::NautilusMenuItem,
     user_data: *mut c_void,
 ) {
     let uri = (*(user_data as *const String)).clone();
-    super::activation::activate_terminal(uri);
+    super::activation::activate_connection(uri);
 }
 
 unsafe fn build_menu_item(
@@ -87,18 +87,18 @@ pub(super) unsafe extern "C" fn get_file_items_trampoline(
         return ptr::null_mut();
     }
 
-    let terminal_item = build_menu_item(
-        "OvpnConnect::connect_terminal",
-        &crate::i18n::translate("Connect in Terminal"),
-        &crate::i18n::translate("Start the OpenVPN connection in a terminal"),
-        "utilities-terminal",
+    let connect_item = build_menu_item(
+        "OvpnConnect::connect",
+        &crate::i18n::translate("Connect with OpenVPN 3"),
+        &crate::i18n::translate("Start the OpenVPN connection"),
+        "network-vpn",
         &uri,
-        on_activate_terminal,
+        on_activate_connection,
     );
 
     let mut list = ptr::null_mut();
-    if !terminal_item.is_null() {
-        list = glib_sys::g_list_append(list, terminal_item as *mut c_void);
+    if !connect_item.is_null() {
+        list = glib_sys::g_list_append(list, connect_item as *mut c_void);
     }
     list
 }

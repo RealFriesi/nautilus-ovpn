@@ -4,44 +4,29 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-msgid "Connect in Terminal"
+msgid "Connect with OpenVPN 3"
 msgstr ""
 
-msgid "Start the OpenVPN connection in a terminal"
+msgid "Start the OpenVPN connection"
 msgstr ""
 
-msgid "VPN options for"
-msgstr ""
-
-msgid "This VPN connection requires credentials."
-msgstr ""
-
-msgid "This VPN connection does not require credentials."
-msgstr ""
-
-msgid "Username"
-msgstr ""
-
-msgid "Password"
-msgstr ""
-
-msgid "Private key password (optional)"
-msgstr ""
-
-msgid "Legacy authentication"
-msgstr ""
-
-msgid "Save credentials"
-msgstr ""
-
-msgid "Save settings"
+msgid "Save in keyring"
 msgstr ""
 
 msgid "Cancel"
 msgstr ""
 
-msgid "Connect"
+msgid "Submit"
 msgstr ""
 
-msgid "Connection ended. Press Enter to close."
+msgid "Disconnect"
+msgstr ""
+
+msgid "Connecting"
+msgstr ""
+
+msgid "Disconnecting"
+msgstr ""
+
+msgid "OpenVPN authentication"
 msgstr ""
