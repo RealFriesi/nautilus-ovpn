@@ -1273,7 +1273,6 @@ name = "nautilus-ovpn"
 version = "0.1.3"
 dependencies = [
  "base64",
- "bindgen",
  "futures-util",
  "gettext-rs",
  "gio",
@@ -1283,13 +1282,23 @@ dependencies = [
  "gobject-sys",
  "gtk4",
  "libc",
+ "nautilus-sys",
  "oo7",
  "rhai",
- "system-deps",
  "tokio",
  "uuid",
  "xxhash-rust",
  "zbus 4.4.0",
+]
+
+[[package]]
+name = "nautilus-sys"
+version = "0.1.0"
+dependencies = [
+ "bindgen",
+ "glib-sys",
+ "gobject-sys",
+ "system-deps",
 ]
 
 [[package]]
@@ -1471,6 +1480,15 @@ dependencies = [
  "zbus_macros 5.19.0",
  "zeroize",
  "zvariant 5.15.0",
+]
+
+[[package]]
+name = "openvpn-profile-merge"
+version = "0.1.0"
+dependencies = [
+ "bindgen",
+ "cc",
+ "tempfile",
 ]
 
 [[package]]

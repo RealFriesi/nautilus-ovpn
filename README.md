@@ -22,7 +22,8 @@ AI.
 
 You need a Rust toolchain (edition 2021) with `cargo`, plus the development
 headers and pkg-config metadata for `bindgen`, GLib, GTK4, and
-`libnautilus-extension-4`.
+`libnautilus-extension-4`, plus C++20, standalone Asio, and fmt for the
+OpenVPN profile-merger bindings.
 
 #### Ubuntu / Debian
 
@@ -32,6 +33,8 @@ sudo apt-get install -y --no-install-recommends \
   build-essential \
   pkg-config \
   libclang-dev \
+  libasio-dev \
+  libfmt-dev \
   libglib2.0-dev \
   libgtk-4-dev \
   libnautilus-extension-dev \
@@ -45,6 +48,8 @@ sudo dnf install -y \
   gcc \
   pkgconf-pkg-config \
   clang-devel \
+  asio-devel \
+  fmt-devel \
   glib2-devel \
   gtk4-devel \
   nautilus-devel \
@@ -59,7 +64,8 @@ sudo dnf install -y \
 ## Build and install
 
 ```sh
-cargo build --release
+git submodule update --init
+cargo build --workspace --release
 ```
 
 The compiled shared library is `target/release/libnautilus_ovpn.so`.

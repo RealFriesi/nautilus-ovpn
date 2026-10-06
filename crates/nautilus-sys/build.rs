@@ -1,12 +1,10 @@
 use std::{env, path::PathBuf};
 
 fn main() {
-    // Build-time setup for the Nautilus GTK extension: detect the required
-    // library paths and generate the Rust bindings used by the extension code.
     let deps = system_deps::Config::new().probe().unwrap();
 
     let mut bindings = bindgen::Builder::default()
-        .header("src/ffi-wrapper.h")
+        .header("wrapper.h")
         .allowlist_function("nautilus_menu_provider_get_type")
         .allowlist_function("nautilus_menu_item_new")
         .allowlist_function("nautilus_file_info_get_uri")
