@@ -22,8 +22,7 @@ AI.
 
 You need a Rust toolchain (edition 2021) with `cargo`, plus the development
 headers and pkg-config metadata for `bindgen`, GLib, GTK4, and
-`libnautilus-extension-4`, plus C++20, standalone Asio, and fmt for the
-OpenVPN profile-merger bindings.
+`libnautilus-extension-4`.
 
 #### Ubuntu / Debian
 
@@ -33,8 +32,6 @@ sudo apt-get install -y --no-install-recommends \
   build-essential \
   pkg-config \
   libclang-dev \
-  libasio-dev \
-  libfmt-dev \
   libglib2.0-dev \
   libgtk-4-dev \
   libnautilus-extension-dev \
@@ -48,8 +45,6 @@ sudo dnf install -y \
   gcc \
   pkgconf-pkg-config \
   clang-devel \
-  asio-devel \
-  fmt-devel \
   glib2-devel \
   gtk4-devel \
   nautilus-devel \
@@ -64,7 +59,6 @@ sudo dnf install -y \
 ## Build and install
 
 ```sh
-git submodule update --init
 cargo build --workspace --release
 ```
 
@@ -114,14 +108,17 @@ starting Nautilus.
 
 ## How the extension works
 
-For each selected configuration, the extension reads the `.ovpn` file and its
-referenced companion files directly through GIO. It computes an XXH3-128 profile
-hash from the profile contents for Secret Service lookup; the source URI is not
-part of the keyring identity. No temporary profile directory is created.
+The extension reads the `.ovpn` profile and its referenced files through GIO
+and inlines recognized file directives with its Rust parser. Relative paths,
+including `..`, and absolute paths are resolved from the selected profile's
+GIO parent or directly. No temporary profile directory is created.
+
+The extension computes an XXH3-128 profile hash from the profile contents for
+Secret Service lookup; the source URI is not part of the keyring identity.
 
 The activation process:
 
-1. reads the selected `.ovpn` file and companion files directly from their source
+1. reads the selected `.ovpn` file and companion files through GIO
 2. embeds external certificates and keys into the in-memory D-Bus payload
 3. imports the profile with `single_use=true` and `persistent=false`
 4. creates a session through `net.openvpn.v3.sessions.NewTunnel`

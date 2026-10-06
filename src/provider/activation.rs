@@ -36,7 +36,7 @@ async fn start_session(uri: &str, ui: UiBridge) -> Result<(), String> {
     let profile = vpn::load_profile(uri)?;
     let client = vpn::Client::connect_system_bus().await?;
     let session = client
-        .import_and_create_session(&profile.display_name, &profile.payload)
+        .import_and_create_session(&profile.session_name, &profile.payload)
         .await?;
 
     let mut context = HookContext::default();

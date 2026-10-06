@@ -4,7 +4,7 @@ version = "0.1.3"
 edition = "2021"
 
 [workspace]
-members = [".", "crates/nautilus-sys", "crates/openvpn-profile-merge"]
+members = [".", "crates/nautilus-sys"]
 resolver = "2"
 
 [lib]

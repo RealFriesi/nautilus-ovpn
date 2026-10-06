@@ -1,4 +1,4 @@
-use std::path::{Component, Path};
+use std::path::Path;
 
 use base64::Engine as _;
 use gio::prelude::*;
@@ -19,6 +19,7 @@ const FILE_DIRECTIVES: &[&str] = &[
 
 pub struct PreparedProfile {
     pub display_name: String,
+    pub session_name: String,
     pub profile_hash: String,
     pub payload: String,
 }
@@ -38,13 +39,46 @@ pub fn load_profile(uri: &str) -> Result<PreparedProfile, String> {
     let source_contents = std::str::from_utf8(source_bytes.as_ref())
         .map_err(|error| format!("selected OpenVPN profile is not valid UTF-8: {error}"))?;
     let display_name = profile_display_name(source.path().as_deref(), &filename.to_string_lossy());
+    let profile_hash = crate::keyring::profile_hash(source_bytes.as_ref());
+    let config_name = Path::new(filename.as_os_str())
+        .file_stem()
+        .and_then(|name| name.to_str())
+        .unwrap_or("profile");
+    let session_name = session_config_name(config_name, &profile_hash);
     let payload = inline_referenced_files(source_contents, &parent)?;
 
     Ok(PreparedProfile {
         display_name,
-        profile_hash: crate::keyring::profile_hash(source_bytes.as_ref()),
+        session_name,
+        profile_hash,
         payload,
     })
+}
+
+fn session_config_name(config_name: &str, profile_hash: &str) -> String {
+    let mut sanitized = String::new();
+    let mut previous_was_separator = true;
+    for character in config_name.chars() {
+        if character.is_ascii_alphanumeric() {
+            sanitized.push(character);
+            previous_was_separator = false;
+        } else if !previous_was_separator {
+            sanitized.push('-');
+            previous_was_separator = true;
+        }
+    }
+    if sanitized.is_empty() {
+        sanitized.push_str("profile");
+    }
+
+    let hash_suffix: String = profile_hash
+        .rsplit(':')
+        .next()
+        .unwrap_or(profile_hash)
+        .chars()
+        .take(16)
+        .collect();
+    format!("nautilus-ovpn-{sanitized}-{hash_suffix}")
 }
 
 fn profile_display_name(source_path: Option<&Path>, source_name: &str) -> String {
@@ -130,8 +164,12 @@ fn inline_referenced_files(contents: &str, parent: &gio::File) -> Result<String,
             return Err("crl-verify directory mode cannot be inlined".to_string());
         }
 
-        let path = safe_relative_path(filename)?;
-        let file = parent.resolve_relative_path(path);
+        let path = Path::new(filename);
+        let file = if path.is_absolute() {
+            gio::File::for_path(path)
+        } else {
+            parent.resolve_relative_path(path)
+        };
         let bytes = file
             .load_contents(gio::Cancellable::NONE)
             .map_err(|error| format!("failed to read profile companion {path:?}: {error}"))?
@@ -211,23 +249,9 @@ fn words(line: &str) -> Result<Vec<String>, String> {
     Ok(result)
 }
 
-fn safe_relative_path(path: &str) -> Result<&Path, String> {
-    let path = Path::new(path);
-    if path.is_absolute()
-        || path
-            .components()
-            .any(|component| !matches!(component, Component::Normal(_) | Component::CurDir))
-    {
-        return Err(format!(
-            "OpenVPN dependency must be relative to the selected profile: {path:?}"
-        ));
-    }
-    Ok(path)
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{inline_referenced_files, profile_display_name};
+    use super::{inline_referenced_files, profile_display_name, session_config_name};
     use std::fs;
     use std::path::Path;
 
@@ -256,7 +280,26 @@ mod tests {
     }
 
     #[test]
-    fn preserves_absolute_references_and_rejects_parent_traversal() {
+    fn follows_parent_and_absolute_references_for_gio_profiles() {
+        let root =
+            std::env::temp_dir().join(format!("nautilus-ovpn-paths-{}", uuid::Uuid::new_v4()));
+        let profile_dir = root.join("profiles");
+        fs::create_dir_all(&profile_dir).expect("create profile directory");
+        fs::write(root.join("outside.pem"), "parent certificate\n").expect("write parent file");
+        let absolute_file = root.join("absolute.pem");
+        fs::write(&absolute_file, "absolute certificate\n").expect("write absolute file");
+
+        let contents = format!("ca ../outside.pem\ncert {}\n", absolute_file.display());
+        let result = inline_referenced_files(&contents, &gio::File::for_path(&profile_dir))
+            .expect("follow full file references");
+
+        assert!(result.contains("<ca>\nparent certificate\n</ca>"));
+        assert!(result.contains("<cert>\nabsolute certificate\n</cert>"));
+        fs::remove_dir_all(root).expect("remove profile fixture");
+    }
+
+    #[test]
+    fn preserves_comments_and_existing_inline_blocks() {
         let result = inline_referenced_files(
             "# ca /etc/example.pem\nauth-user-pass # prompt\n<ca>\ninline\n</ca>\n",
             &gio::File::for_path("/tmp"),
@@ -265,9 +308,6 @@ mod tests {
         assert!(result.contains("# ca /etc/example.pem"));
         assert!(result.contains("auth-user-pass # prompt"));
         assert!(result.contains("<ca>\ninline\n</ca>"));
-        assert!(
-            inline_referenced_files("ca ../outside.pem\n", &gio::File::for_path("/tmp")).is_err()
-        );
     }
 
     #[test]
@@ -275,6 +315,22 @@ mod tests {
         assert_eq!(
             profile_display_name(Some(Path::new("/vpn/work/profile.ovpn")), "profile.ovpn"),
             "work"
+        );
+    }
+
+    #[test]
+    fn session_config_name_sanitizes_and_uses_a_short_file_hash() {
+        assert_eq!(
+            session_config_name("VPN / Büro", "xxh3-128:0123456789abcdef0123456789abcdef"),
+            "nautilus-ovpn-VPN-B-ro-0123456789abcdef"
+        );
+    }
+
+    #[test]
+    fn session_config_names_differ_for_different_file_hashes() {
+        assert_ne!(
+            session_config_name("work", "xxh3-128:0123456789abcdef0123456789abcdef"),
+            session_config_name("work", "xxh3-128:fedcba9876543210fedcba9876543210")
         );
     }
 }
