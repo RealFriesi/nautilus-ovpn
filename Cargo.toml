@@ -3,4 +3,11 @@ name = "nautilus-ovpn"
 version = "0.2.0"
 edition = "2024"
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
+
+[build-dependencies]
+bindgen = "0.72"
+pkg-config = "0.3"

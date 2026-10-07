@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^pkg-config --modversion libnautilus-extension-4 2>/dev/null \\|\\| pkg-config --list-all \\| grep -i nautilus \\|\\| true; find /usr/include -path '\\*nautilus\\*extension\\*\\.h' -o -path '\\*nautilus\\*module\\*\\.h' 2>/dev/null \\| head -30; find \\. -maxdepth 3 -type f -not -path '\\./target/\\*' -print$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
