@@ -1,51 +1,14 @@
-//! Nautilus menu-provider extension for activating OpenVPN configurations.
-
-mod credentials;
-mod ffi;
-mod i18n;
-mod provider;
-mod staging;
-
-use std::os::raw::c_int;
-
-pub(crate) fn log(msg: impl AsRef<str>) {
-    println!("[nautilus-openvpn] {}", msg.as_ref());
+pub fn add(left: u64, right: u64) -> u64 {
+    left + right
 }
 
-pub(crate) fn log_err(msg: impl AsRef<str>) {
-    eprintln!("[nautilus-openvpn] {}", msg.as_ref());
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-/// # Safety
-/// Nautilus calls this during extension loading. The GTK runtime is initialized
-/// once and the provider type is registered with the module.
-#[no_mangle]
-pub unsafe extern "C" fn nautilus_module_initialize(module: *mut gobject_sys::GTypeModule) {
-    log("initializing extension module");
-    i18n::initialize();
-    if !gtk::is_initialized() {
-        if let Err(error) = gtk::init() {
-            log_err(format!("failed to initialize GTK: {error}"));
-            return;
-        }
+    #[test]
+    fn it_works() {
+        let result = add(2, 2);
+        assert_eq!(result, 4);
     }
-    provider::initialize(module);
-}
-
-/// # Safety
-/// Called by Nautilus when unloading the extension module.
-#[no_mangle]
-pub unsafe extern "C" fn nautilus_module_shutdown() {
-    log("shutting down extension module");
-}
-
-/// # Safety
-/// Called by Nautilus to enumerate the `GType`s this module provides.
-/// `types` and `num_types` must be valid, writable out-parameters.
-#[no_mangle]
-pub unsafe extern "C" fn nautilus_module_list_types(
-    types: *mut *const glib_sys::GType,
-    num_types: *mut c_int,
-) {
-    provider::list_types(types, num_types);
 }
