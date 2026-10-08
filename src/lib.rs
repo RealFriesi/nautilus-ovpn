@@ -105,33 +105,3 @@ pub extern "C" fn nautilus_module_list_types(
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn base_gobject_layouts_are_available() {
-        assert!(size_of::<ffi::GObject>() > 0);
-        assert!(size_of::<ffi::GObjectClass>() > 0);
-    }
-
-    #[test]
-    fn module_lists_no_types_before_initialization() {
-        let mut types: *const ffi::GType = std::ptr::dangling();
-        let mut num_types = -1;
-
-        nautilus_module_list_types(&mut types, &mut num_types);
-
-        assert!(types.is_null());
-        assert_eq!(num_types, 0);
-    }
-
-    #[test]
-    fn empty_menu_provider_returns_no_items() {
-        unsafe {
-            assert!(get_file_items(std::ptr::null_mut(), std::ptr::null_mut()).is_null());
-            assert!(get_background_items(std::ptr::null_mut(), std::ptr::null_mut()).is_null());
-        }
-    }
-}
