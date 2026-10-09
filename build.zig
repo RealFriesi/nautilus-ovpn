@@ -13,6 +13,7 @@ pub fn build(b: *std.Build) void {
         ),
         .target = target,
         .optimize = optimize,
+        .link_libc = true,
         .link_system_libs = &.{
             .{ .name = "libnautilus-extension-4" },
             .{ .name = "glib-2.0" },
