@@ -1,0 +1,23 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build and test Nautilus extension",
+            "type": "process",
+            "command": "/usr/bin/bash",
+            "args": [
+                "-c",
+                "set -e; zig_bin=\"$(command -v zig || find \"$HOME/.config/Code/User/globalStorage/ziglang.vscode-zig/zig\" -type f -name zig -perm -111 -print -quit)\"; test -n \"$zig_bin\" || { echo 'Zig compiler not found in PATH or VS Code Zig extension storage' >&2; exit 1; }; \"$zig_bin\" build; sudo ln -sfn \"$PWD/zig-out/lib/libnautilus_ovpn.so\" /usr/lib64/nautilus/extensions-4/libnautilus_ovpn.so; if pgrep -x nautilus >/dev/null; then nautilus -q; fi; mkdir -p /tmp/nautilus-ovpn-extension-test; nautilus --new-window /tmp/nautilus-ovpn-extension-test"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": "$gcc",
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true
+            }
+        }
+    ]
+}
